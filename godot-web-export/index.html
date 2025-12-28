@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Ball Bounce</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: linear-gradient(180deg, #1a0033 0%, #0a0a0a 100%);
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 20px #00ffff, inset 0 0 20px rgba(0, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            display: block;
+            cursor: pointer;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10;
+        }
+
+        .screen.hidden {
+            display: none;
+        }
+
+        h1 {
+            font-size: 48px;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff;
+            margin-bottom: 30px;
+            animation: neonPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes neonPulse {
+            from { text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff; }
+            to { text-shadow: 0 0 30px #00ffff, 0 0 60px #00ffff, 0 0 80px #00ffff; }
+        }
+
+        .button {
+            padding: 15px 40px;
+            font-size: 24px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
+        }
+
+        .button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.8);
+        }
+
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+            z-index: 5;
+        }
+
+        #highScore {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 18px;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+            z-index: 5;
+        }
+
+        .game-over-text {
+            font-size: 36px;
+            color: #ff0066;
+            text-shadow: 0 0 20px #ff0066;
+            margin-bottom: 20px;
+        }
+
+        .final-score {
+            font-size: 28px;
+            color: #00ffff;
+            text-shadow: 0 0 15px #00ffff;
+            margin-bottom: 30px;
+        }
+
+        #playerNameInput {
+            padding: 10px;
+            font-size: 18px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            color: #00ffff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #playerNameInput::placeholder {
+            color: rgba(0, 255, 255, 0.5);
+        }
+
+        .instructions {
+            font-size: 16px;
+            color: #ff00ff;
+            text-shadow: 0 0 10px #ff00ff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .leaderboard {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
+        }
+
+        .leaderboard h3 {
+            color: #00ffff;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .leaderboard-item {
+            color: #ff00ff;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="score" style="display: none;">Score: 0</div>
+        <div id="highScore">High Score: 0</div>
+        
+        <div id="startScreen" class="screen">
+            <h1>NEON BALL BOUNCE</h1>
+            <div class="instructions">
+                Click, tap, or press SPACE to jump<br>
+                Avoid spikes and don't fall!<br>
+                +1 point for each bounce
+            </div>
+            <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="20">
+            <button class="button" onclick="startGame()">START GAME</button>
+            <div class="leaderboard" id="startLeaderboard">
+                <h3>Top Scores</h3>
+                <div id="topScoresList"></div>
+            </div>
+        </div>
+        
+        <div id="gameOverScreen" class="screen hidden">
+            <div class="game-over-text">GAME OVER</div>
+            <div class="final-score" id="finalScore">Final Score: 0</div>
+            <div id="newHighScore" style="display: none; color: #ffff00; font-size: 24px; margin-bottom: 20px;">🎉 NEW HIGH SCORE! 🎉</div>
+            <button class="button" onclick="restartGame()">RESTART</button>
+            <button class="button" onclick="backToMenu()">MAIN MENU</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
+        const finalScoreElement = document.getElementById('finalScore');
+        const newHighScoreElement = document.getElementById('newHighScore');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const playerNameInput = document.getElementById('playerNameInput');
+        const topScoresList = document.getElementById('topScoresList');
+
+        let gameState = 'menu'; // menu, playing, gameOver
+        let score = 0;
+        let highScore = 0;
+        let gameSpeed = 2;
+        let lastTime = 0;
+        let playerName = '';
+
+        // Player (Ball)
+        const player = {
+            x: 100,
+            y: 300,
+            radius: 15,
+            velocityY: 0,
+            gravity: 0.5,
+            jumpPower: -12,
+            bouncePower: -10,
+            color: '#00ffff',
+            glowColor: '#00ffff',
+            trail: []
+        };
+
+        // Game objects
+        let platforms = [];
+        let obstacles = [];
+        let particles = [];
+
+        // Platform class
+        class Platform {
+            constructor(x, y, width, height, type = 'normal') {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.type = type;
+                this.color = type === 'moving' ? '#ff00ff' : '#00ffff';
+                this.glowColor = type === 'moving' ? '#ff00ff' : '#00ffff';
+                this.moveDirection = Math.random() > 0.5 ? 1 : -1;
+                this.moveSpeed = 1;
+                this.moveRange = 100;
+                this.startY = y;
+                this.bounced = false;
+            }
+
+            update() {
+                if (this.type === 'moving') {
+                    this.y += this.moveDirection * this.moveSpeed;
+                    if (Math.abs(this.y - this.startY) > this.moveRange) {
+                        this.moveDirection *= -1;
+                    }
+                }
+            }
+
+            draw() {
+                // Glow effect
+                ctx.shadowColor = this.glowColor;
+                ctx.shadowBlur = 20;
+                
+                // Platform body
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Neon border
+                ctx.strokeStyle = this.glowColor;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                
+                ctx.shadowBlur = 0;
+            }
+
+            checkCollision(ball) {
+                const closestX = Math.max(this.x, Math.min(ball.x, this.x + this.width));
+                const closestY = Math.max(this.y, Math.min(ball.y, this.y + this.height));
+                
+                const distanceX = ball.x - closestX;
+                const distanceY = ball.y - closestY;
+                
+                const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+                
+                return distanceSquared < (ball.radius * ball.radius);
+            }
+        }
+
+        // Obstacle class
+        class Obstacle {
+            constructor(x, y, width, height, type = 'spike') {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.type = type;
+                this.color = '#ff0066';
+                this.glowColor = '#ff0066';
+                this.rotation = 0;
+            }
+
+            update() {
+                this.rotation += 0.02;
+            }
+
+            draw() {
+                ctx.shadowColor = this.glowColor;
+                ctx.shadowBlur = 15;
+                
+                if (this.type === 'spike') {
+                    // Draw spike
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + this.width / 2, this.y);
+                    ctx.lineTo(this.x + this.width, this.y + this.height);
+                    ctx.lineTo(this.x, this.y + this.height);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // Draw laser bar
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                }
+                
+                ctx.shadowBlur = 0;
+            }
+
+            checkCollision(ball) {
+                const closestX = Math.max(this.x, Math.min(ball.x, this.x + this.width));
+                const closestY = Math.max(this.y, Math.min(ball.y, this.y + this.height));
+                
+                const distanceX = ball.x - closestX;
+                const distanceY = ball.y - closestY;
+                
+                const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+                
+                return distanceSquared < (ball.radius * ball.radius);
+            }
+        }
+
+        // Particle class
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 1;
+                this.decay = 0.02;
+                this.color = color;
+                this.size = Math.random() * 3 + 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                this.size *= 0.98;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // Initialize game
+        function init() {
+            loadGameData();
+            generateInitialPlatforms();
+            gameLoop();
+        }
+
+        // Load game data from localStorage
+        function loadGameData() {
+            const savedData = localStorage.getItem('neonBallGameData');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                highScore = data.highScore || 0;
+                playerName = data.lastPlayerName || '';
+                if (playerNameInput) {
+                    playerNameInput.value = playerName;
+                }
+                updateHighScoreDisplay();
+                displayTopScores(data.scores || []);
+            }
+        }
+
+        // Save game data to localStorage
+        function saveGameData() {
+            const savedData = localStorage.getItem('neonBallGameData');
+            let data = savedData ? JSON.parse(savedData) : { scores: [] };
+            
+            data.highScore = highScore;
+            data.lastPlayerName = playerName;
+            
+            // Add new score to scores array
+            if (score > 0) {
+                data.scores = data.scores || [];
+                data.scores.push({
+                    playerName: playerName || 'Anonymous',
+                    score: score,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // Keep only top 10 scores
+                data.scores.sort((a, b) => b.score - a.score);
+                data.scores = data.scores.slice(0, 10);
+            }
+            
+            localStorage.setItem('neonBallGameData', JSON.stringify(data));
+            
+            // Save to Applaa storage
+            if (window.parent) {
+                window.parent.postMessage({
+                    type: 'applaa-game-save-score',
+                    gameId: 'neon-ball-bounce',
+                    playerName: playerName || 'Anonymous',
+                    score: score
+                }, '*');
+            }
+        }
+
+        // Update high score display
+        function updateHighScoreDisplay() {
+            highScoreElement.textContent = `High Score: ${highScore}`;
+        }
+
+        // Display top scores
+        function displayTopScores(scores) {
+            if (topScoresList && scores.length > 0) {
+                topScoresList.innerHTML = '';
+                scores.slice(0, 5).forEach((scoreData, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'leaderboard-item';
+                    item.textContent = `${index + 1}. ${scoreData.playerName} - ${scoreData.score}`;
+                    topScoresList.appendChild(item);
+                });
+            }
+        }
+
+        // Generate initial platforms
+        function generateInitialPlatforms() {
+            platforms = [];
+            obstacles = [];
+            
+            // Starting platform
+            platforms.push(new Platform(50, 400, 150, 20, 'normal'));
+            
+            // Generate platforms
+            for (let i = 1; i < 10; i++) {
+                const x = Math.random() * (canvas.width - 100) + 50;
+                const y = 400 - (i * 80);
+                const width = Math.max(80, 120 - (score * 0.5)); // Platforms get smaller
+                const type = Math.random() > 0.7 ? 'moving' : 'normal';
+                
+                platforms.push(new Platform(x, y, width, 20, type));
+                
+                // Add obstacles after score 10
+                if (score > 10 && Math.random() > 0.6) {
+                    const obstacleX = x + Math.random() * (width - 30);
+                    const obstacleY = y - 40;
+                    obstacles.push(new Obstacle(obstacleX, obstacleY, 30, 30, 'spike'));
+                }
+            }
+        }
+
+        // Game loop
+        function gameLoop(currentTime = 0) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (gameState === 'playing') {
+                update(deltaTime);
+                draw();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Update game state
+        function update(deltaTime) {
+            // Update player
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+
+            // Add trail effect
+            player.trail.push({ x: player.x, y: player.y });
+            if (player.trail.length > 10) {
+                player.trail.shift();
+            }
+
+            // Update platforms
+            platforms.forEach(platform => {
+                platform.update();
+                
+                // Check collision with platforms
+                if (platform.checkCollision(player) && player.velocityY > 0) {
+                    if (!platform.bounced) {
+                        player.y = platform.y - player.radius;
+                        player.velocityY = player.bouncePower;
+                        platform.bounced = true;
+                        score++;
+                        scoreElement.textContent = `Score: ${score}`;
+                        
+                        // Create particles
+                        for (let i = 0; i < 10; i++) {
+                            particles.push(new Particle(player.x, player.y, platform.color));
+                        }
+                        
+                        // Increase difficulty
+                        if (score % 5 === 0) {
+                            gameSpeed += 0.5;
+                        }
+                    }
+                } else {
+                    platform.bounced = false;
+                }
+            });
+
+            // Update obstacles
+            obstacles.forEach(obstacle => {
+                obstacle.update();
+                
+                // Check collision with obstacles
+                if (obstacle.checkCollision(player)) {
+                    gameOver();
+                }
+            });
+
+            // Update particles
+            particles = particles.filter(particle => {
+                particle.update();
+                return particle.life > 0;
+            });
+
+            // Scroll world
+            if (player.y < canvas.height / 2) {
+                const scrollAmount = canvas.height / 2 - player.y;
+                player.y = canvas.height / 2;
+                
+                platforms.forEach(platform => {
+                    platform.y += scrollAmount;
+                });
+                
+                obstacles.forEach(obstacle => {
+                    obstacle.y += scrollAmount;
+                });
+                
+                particles.forEach(particle => {
+                    particle.y += scrollAmount;
+                });
+            }
+
+            // Generate new platforms
+            const highestPlatform = Math.min(...platforms.map(p => p.y));
+            if (highestPlatform > -100) {
+                const x = Math.random() * (canvas.width - 100) + 50;
+                const y = highestPlatform - 80;
+                const width = Math.max(60, 120 - (score * 0.5));
+                const type = Math.random() > 0.6 ? 'moving' : 'normal';
+                
+                platforms.push(new Platform(x, y, width, 20, type));
+                
+                // Add obstacles
+                if (score > 10 && Math.random() > 0.5) {
+                    const obstacleX = x + Math.random() * (width - 30);
+                    const obstacleY = y - 40;
+                    obstacles.push(new Obstacle(obstacleX, obstacleY, 30, 30, 'spike'));
+                }
+            }
+
+            // Remove off-screen platforms and obstacles
+            platforms = platforms.filter(platform => platform.y < canvas.height + 50);
+            obstacles = obstacles.filter(obstacle => obstacle.y < canvas.height + 50);
+
+            // Check if player fell
+            if (player.y > canvas.height + 50) {
+                gameOver();
+            }
+        }
+
+        // Draw game
+        function draw() {
+            // Draw player trail
+            player.trail.forEach((point, index) => {
+                const alpha = index / player.trail.length;
+                ctx.globalAlpha = alpha * 0.5;
+                ctx.fillStyle = player.color;
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, player.radius * alpha, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw player with glow
+            ctx.shadowColor = player.glowColor;
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Draw platforms
+            platforms.forEach(platform => platform.draw());
+
+            // Draw obstacles
+            obstacles.forEach(obstacle => obstacle.draw());
+
+            // Draw particles
+            particles.forEach(particle => particle.draw());
+        }
+
+        // Start game
+        function startGame() {
+            playerName = playerNameInput.value.trim() || 'Anonymous';
+            gameState = 'playing';
+            score = 0;
+            gameSpeed = 2;
+            player.x = 100;
+            player.y = 300;
+            player.velocityY = 0;
+            player.trail = [];
+            particles = [];
+            
+            scoreElement.textContent = `Score: ${score}`;
+            scoreElement.style.display = 'block';
+            startScreen.classList.add('hidden');
+            
+            generateInitialPlatforms();
+        }
+
+        // Game over
+        function gameOver() {
+            gameState = 'gameOver';
+            
+            if (score > highScore) {
+                highScore = score;
+                newHighScoreElement.style.display = 'block';
+                updateHighScoreDisplay();
+            } else {
+                newHighScoreElement.style.display = 'none';
+            }
+            
+            finalScoreElement.textContent = `Final Score: ${score}`;
+            gameOverScreen.classList.remove('hidden');
+            
+            saveGameData();
+        }
+
+        // Restart game
+        function restartGame() {
+            gameOverScreen.classList.add('hidden');
+            startGame();
+        }
+
+        // Back to menu
+        function backToMenu() {
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            scoreElement.style.display = 'none';
+        }
+
+        // Input handling
+        canvas.addEventListener('click', () => {
+            if (gameState === 'playing') {
+                playerJump();
+            }
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState === 'playing') {
+                playerJump();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && gameState === 'playing') {
+                e.preventDefault();
+                playerJump();
+            }
+        });
+
+        function playerJump() {
+            if (player.velocityY > -5) { // Prevent infinite jumping
+                player.velocityY = player.jumpPower;
+            }
+        }
+
+        // Initialize game when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
